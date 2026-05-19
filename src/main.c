@@ -37,6 +37,10 @@ int main() {
     GPIO_Init(GPIOG, greenLed);
     GPIO_Init(GPIOG, redLed);
 
+    /*lock green led pin configuration*/
+    GPIO_LockPinConf(GPIOG, GPIO_PIN_NUM_13);
+    /*turn on the green led*/
+    GPIO_WritePin(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_HIGH);
     while (1) {
         /*if (GPIO_ReadPin(GPIOA, GPIO_PIN_NUM_0)) {
             GPIO_WritePin(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_HIGH);
@@ -54,11 +58,20 @@ int main() {
             }
             
         }*/
-       if (GPIO_ReadPin(GPIOA, GPIO_PIN_NUM_0)) {
+       /*if (GPIO_ReadPin(GPIOA, GPIO_PIN_NUM_0)) {
             GPIO_WritePinBit(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_HIGH);
        } else {
             GPIO_WritePinBit(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_LOW);
-       }
+       }*/
+
+       if (GPIO_ReadPin(GPIOA, GPIO_PIN_NUM_0)) {
+            delay(DEBOUNCE_DELAY);
+            if (GPIO_ReadPin(GPIOA, GPIO_PIN_NUM_0)) {
+                greenLed.GPIO_PinMode = GPIO_MODE_INPUT;
+                GPIO_Init(GPIOG, greenLed);
+            }
+            
+        }
     }
 
     return 0;
