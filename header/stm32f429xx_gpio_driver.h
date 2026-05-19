@@ -79,5 +79,7 @@ typedef enum {
 void GPIO_Init(GPIO_RefDef_t * GPIOx, GPIO_PinConf_t GPIOPinConf);
 void GPIO_WritePin(GPIO_RefDef_t * GPIOx, uint8_t PinNumber, GPIO_PinState_e PinState);
 uint8_t GPIO_ReadPin(GPIO_RefDef_t * GPIOx, uint8_t PinNumber);
+void GPIO_ToggleLed(GPIO_RefDef_t * GPIOx, uint8_t PinNumber);
+void GPIO_WritePinBit(GPIO_RefDef_t * GPIOx, uint8_t PinNumber, GPIO_PinState_e PinState);
 
 #endif //STM32F429XX_GPIO_DRIVER_H

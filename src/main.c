@@ -1,7 +1,8 @@
 #include <stdint.h>
 #include "stm32f429xx.h"
 
-#define DELAY 1000000
+#define BLINK_DELAY    1000000
+#define DEBOUNCE_DELAY 300000
 
 void delay(uint32_t amount) {
     volatile uint32_t cnt = amount;
@@ -37,14 +38,27 @@ int main() {
     GPIO_Init(GPIOG, redLed);
 
     while (1) {
-        if (GPIO_ReadPin(GPIOA, GPIO_PIN_NUM_0)) {
+        /*if (GPIO_ReadPin(GPIOA, GPIO_PIN_NUM_0)) {
             GPIO_WritePin(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_HIGH);
             GPIO_WritePin(GPIOG, GPIO_PIN_NUM_14, GPIO_PIN_LOW);
-            delay(DELAY);
+            delay(BLINK_DELAY);
             GPIO_WritePin(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_LOW);
             GPIO_WritePin(GPIOG, GPIO_PIN_NUM_14, GPIO_PIN_HIGH);
-            delay(DELAY);
-        }
+            delay(BLINK_DELAY);
+        }*/
+
+        /*if (GPIO_ReadPin(GPIOA, GPIO_PIN_NUM_0)) {
+            delay(DEBOUNCE_DELAY);
+            if (GPIO_ReadPin(GPIOA, GPIO_PIN_NUM_0)) {
+                GPIO_ToggleLed(GPIOG, GPIO_PIN_NUM_13);
+            }
+            
+        }*/
+       if (GPIO_ReadPin(GPIOA, GPIO_PIN_NUM_0)) {
+            GPIO_WritePinBit(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_HIGH);
+       } else {
+            GPIO_WritePinBit(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_LOW);
+       }
     }
 
     return 0;

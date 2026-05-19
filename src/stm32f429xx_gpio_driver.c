@@ -35,5 +35,17 @@ void GPIO_WritePin(GPIO_RefDef_t * GPIOx, uint8_t PinNumber, GPIO_PinState_e Pin
 }
 
 uint8_t GPIO_ReadPin(GPIO_RefDef_t * GPIOx, uint8_t PinNumber) {
-    return (GPIOx->IDR >> PinNumber) & 0x01;
+    return (GPIOx->IDR >> PinNumber) & 0x01U;
+}
+
+void GPIO_ToggleLed(GPIO_RefDef_t * GPIOx, uint8_t PinNumber) {
+    GPIOx->ODR ^= (0x01U << PinNumber);
+}
+
+void GPIO_WritePinBit(GPIO_RefDef_t * GPIOx, uint8_t PinNumber, GPIO_PinState_e PinState) {
+    if (PinState == GPIO_PIN_LOW) {
+        GPIOx->BSRR |= (0x01U << (PinNumber + 16U));
+    } else {
+        GPIOx->BSRR |= (0x01U << PinNumber);
+    }
 }
