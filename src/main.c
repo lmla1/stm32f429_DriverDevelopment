@@ -9,38 +9,42 @@ void delay(uint32_t amount) {
     while (cnt--);
 }
 
-int main() {
-    GPIO_PinConf_t greenLed = {
-        .GPIO_PinNumber = GPIO_PIN_NUM_13,
-        .GPIO_PinMode   = GPIO_MODE_OUTPUT,
-        .GPIO_OutType   = GPIO_OUTPUT_PP,
-        .GPIO_OutSpeed  = GPIO_SPEED_LOW,
-        .GPIO_PUPD      = GPIO_NO_PUPD
-    };
-    GPIO_PinConf_t redLed = {
-        .GPIO_PinNumber = GPIO_PIN_NUM_14,
-        .GPIO_PinMode   = GPIO_MODE_OUTPUT,
-        .GPIO_OutType   = GPIO_OUTPUT_PP,
-        .GPIO_OutSpeed  = GPIO_SPEED_LOW,
-        .GPIO_PUPD      = GPIO_NO_PUPD
-    };
-    GPIO_PinConf_t pushButton = {
-        .GPIO_PinNumber = GPIO_PIN_NUM_0,
-        .GPIO_PinMode   = GPIO_MODE_INPUT,
-        .GPIO_PUPD      = GPIO_NO_PUPD
-    };
+GPIO_PinConf_t greenLed = {
+    .GPIO_PinNumber = GPIO_PIN_NUM_13,
+    .GPIO_PinMode   = GPIO_MODE_OUTPUT,
+    .GPIO_OutType   = GPIO_OUTPUT_PP,
+    .GPIO_OutSpeed  = GPIO_SPEED_LOW,
+    .GPIO_PUPD      = GPIO_NO_PUPD
+};
 
+GPIO_PinConf_t redLed = {
+    .GPIO_PinNumber = GPIO_PIN_NUM_14,
+    .GPIO_PinMode   = GPIO_MODE_OUTPUT,
+    .GPIO_OutType   = GPIO_OUTPUT_PP,
+    .GPIO_OutSpeed  = GPIO_SPEED_LOW,
+    .GPIO_PUPD      = GPIO_NO_PUPD
+};
+
+GPIO_PinConf_t pushButton = {
+    .GPIO_PinNumber   = GPIO_PIN_NUM_0,
+    .GPIO_PinMode     = GPIO_MODE_INPUT,
+    .GPIO_PUPD        = GPIO_NO_PUPD,
+    .GPIO_EdgeTrigger = GPIO_IT_EDGE_RT
+};
+
+int main() {
     GPIOA_CLK_ENB();
     GPIO_Init(GPIOA, pushButton);
+    GPIO_IT_Init(GPIOA, pushButton, 1U);
     
     GPIOG_CLK_ENB();
     GPIO_Init(GPIOG, greenLed);
     GPIO_Init(GPIOG, redLed);
 
     /*lock green led pin configuration*/
-    GPIO_LockPinConf(GPIOG, GPIO_PIN_NUM_13);
+    //GPIO_LockPinConf(GPIOG, GPIO_PIN_NUM_13);
     /*turn on the green led*/
-    GPIO_WritePin(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_HIGH);
+    //GPIO_WritePin(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_HIGH);
     while (1) {
         /*if (GPIO_ReadPin(GPIOA, GPIO_PIN_NUM_0)) {
             GPIO_WritePin(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_HIGH);
@@ -64,15 +68,27 @@ int main() {
             GPIO_WritePinBit(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_LOW);
        }*/
 
-       if (GPIO_ReadPin(GPIOA, GPIO_PIN_NUM_0)) {
+       /*if (GPIO_ReadPin(GPIOA, GPIO_PIN_NUM_0)) {
             delay(DEBOUNCE_DELAY);
             if (GPIO_ReadPin(GPIOA, GPIO_PIN_NUM_0)) {
                 greenLed.GPIO_PinMode = GPIO_MODE_INPUT;
                 GPIO_Init(GPIOG, greenLed);
             }
             
-        }
+        }*/
     }
 
     return 0;
+}
+
+void EXTI0_IRQHandler(void) {
+    /*is the corresponding bit in the EXTI_PR register set?*/
+    if ((EXTI->PR >> pushButton.GPIO_PinNumber) & 0x01U) {
+        /*clear the bit by writing 1*/
+        EXTI->PR |= (0x01U << pushButton.GPIO_PinNumber);
+    }
+    delay(DEBOUNCE_DELAY);
+    if (GPIO_ReadPin(GPIOA, GPIO_PIN_NUM_0)) {
+        GPIO_ToggleLed(GPIOG, GPIO_PIN_NUM_13);
+    }
 }
