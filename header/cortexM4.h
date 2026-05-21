@@ -19,6 +19,9 @@ typedef struct {
     volatile uint32_t STIR;            /*software trigger interrupt register*/
 }NVIC_RegDef_t;
 
+/*NVIC base address*/
+#define NVIC ((NVIC_RegDef_t *) (0xE000E100UL))
+
 /*interrupt request number (IRQn)*/
 #define IRQ_NO_EXTI0      6U
 #define IRQ_NO_EXTI1      7U
@@ -28,8 +31,7 @@ typedef struct {
 #define IRQ_NO_EXTI9_5    23U
 #define IRQ_NO_EXTI10_15  40U
 
-/*NVIC base address*/
-#define NVIC ((NVIC_RegDef_t *) (0xE000E100UL))
+#define NULL ((void *)0)
 
 void NVIC_SetPriority(uint8_t IRQNumber,uint8_t Priority);
 void NVIC_EnableIRQ(uint8_t IRQNumber);

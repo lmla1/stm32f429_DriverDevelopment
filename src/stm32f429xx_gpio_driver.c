@@ -29,7 +29,7 @@ void GPIO_Init(GPIO_RefDef_t * GPIOx, GPIO_PinConf_t GPIOPinConf) {
             GPIOx->AFRL |= (GPIOPinConf.GPIO_AltFnc << GPIOPinConf.GPIO_PinNumber * 4);
         } else {
             GPIOx->AFRH &= ~(0x0FU << GPIOPinConf.GPIO_PinNumber * 4);
-            GPIOx->AFRH |= (GPIOPinConf.GPIO_AltFnc << GPIOPinConf.GPIO_PinNumber * 4);
+            GPIOx->AFRH |= (GPIOPinConf.GPIO_AltFnc << (GPIOPinConf.GPIO_PinNumber - 8 ) * 4);
         }
     }
 }
