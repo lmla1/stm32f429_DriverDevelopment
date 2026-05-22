@@ -3,6 +3,15 @@
 
 #define BLINK_DELAY    1000000
 #define DEBOUNCE_DELAY 300000
+#define RX_BUFFER_SIZE 8U
+#define TX_BUFFER_SIZE 8U
+
+volatile uint8_t ReceivedMess[RX_BUFFER_SIZE];
+volatile uint8_t SendMessage[TX_BUFFER_SIZE] = "J\n";
+volatile uint8_t TxMessSize    = 2U;
+volatile uint8_t RxIndex       = 0U;
+volatile uint8_t RxData        = 0U;
+volatile uint8_t IsRxAvailable = FALSE;
 
 /**
  * @brief Simple delay function. It is uses a for loop to execute a delay.
@@ -67,11 +76,11 @@ USART_Conf_t USART3_Conf = {
 };
 
 int main() {
-    uint8_t ReceivedMess[4] = {0};
-    uint8_t ReceivedMessSize = 3U;
-    //GPIOA_CLK_ENB();
-    //GPIO_Init(GPIOA, pushButton);
-    //GPIO_IT_Init(GPIOA, pushButton, 1U);
+    //uint8_t ReceivedMess[4] = {0};
+    //uint8_t ReceivedMessSize = 3U;
+    GPIOA_CLK_ENB();
+    GPIO_Init(GPIOA, pushButton);
+    GPIO_IT_Init(GPIOA, pushButton, 0U);
     
     GPIOG_CLK_ENB();
     GPIO_Init(GPIOG, greenLed);
@@ -82,6 +91,9 @@ int main() {
     GPIO_Init(GPIOB, USART_Rx_Pin);
 
     USART3_CLK_ENB();
+    USART3_RXNEIE_ENB();                  /*enable receive not empty interrupt*/
+    NVIC_SetPriority(IRQ_NO_USART3, 1U);  /*set USART3 interrupt priority*/
+    NVIC_EnableIRQ(IRQ_NO_USART3);        /*enable USART3 IRQ*/
     USART_Init(USART3, USART3_Conf);
 
     /*lock green led pin configuration*/
@@ -120,32 +132,82 @@ int main() {
                 
             }*/
         /*Receive message*/
-        USART_Receive(USART3, (uint8_t *) &ReceivedMess, ReceivedMessSize);
+        //USART_Receive(USART3, (uint8_t *) &ReceivedMess, ReceivedMessSize);
         /*Echo back the received message*/
-        USART_Transmit(USART3, (uint8_t *) &ReceivedMess, ReceivedMessSize);
+        //USART_Transmit(USART3, (uint8_t *) &ReceivedMess, ReceivedMessSize);
         /*Check if the received message is "ON_"*/
-        if (strcmp((const char *)ReceivedMess, "ON_") == 0) {
-            /*Turn green LED ON*/
-            GPIO_WritePinBit(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_HIGH);
-        }
+        // if (strcmp((const char *)ReceivedMess, "ON_") == 0) {
+        //     /*Turn green LED ON*/
+        //     GPIO_WritePinBit(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_HIGH);
+        // }
         /*Check is the received message is "OFF"*/
-        if (strcmp((const char *)ReceivedMess, "OFF") == 0) {
-            /*Turn green LED OFF*/
-            GPIO_WritePinBit(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_LOW);
+        // if (strcmp((const char *)ReceivedMess, "OFF") == 0) {
+        //     /*Turn green LED OFF*/
+        //     GPIO_WritePinBit(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_LOW);
+        // }
+        /*Is new data available*/
+        if (IsRxAvailable) {
+            /*Check overflow status and store data*/
+            if (RxIndex < RX_BUFFER_SIZE) {
+                /*store data to the received message*/
+                ReceivedMess[RxIndex] = RxData;
+                /*increase the index*/
+                RxIndex++;
+            } else {
+                RxIndex = 0U; /*Overflow recovery*/
+            }
+            /*Reset the Rx data available flag to false*/
+            IsRxAvailable = FALSE;
+
+            /*Check if the message is fully received*/
+            if (RxData == '\n') {
+                /*Null-terminate the string/message*/
+                ReceivedMess[RxIndex - 1] = '\0';
+                /*check if the received message is "ON"*/
+                if (strcmp((const char *)ReceivedMess, "ON") == 0) {
+                    /*Turn green LED ON*/
+                    GPIO_WritePinBit(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_HIGH);
+                }
+                if (strcmp((const char *)ReceivedMess, "OFF") == 0) {
+                    /*Turn green LED OFF*/
+                    GPIO_WritePinBit(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_LOW);
+                }
+                /*Reset the index*/
+                RxIndex = 0U;
+            }
         }
     }
-
     return 0;
 }
 
-// void EXTI0_IRQHandler(void) {
-//     /*is the corresponding bit in the EXTI_PR register set?*/
-//     if ((EXTI->PR >> pushButton.GPIO_PinNumber) & 0x01U) {
-//         /*clear the bit by writing 1*/
-//         EXTI->PR |= (0x01U << pushButton.GPIO_PinNumber);
-//     }
-//     delay(DEBOUNCE_DELAY);
-//     if (GPIO_ReadPin(GPIOA, GPIO_PIN_NUM_0)) { /*check state again*/
-//         GPIO_ToggleLed(GPIOG, GPIO_PIN_NUM_13);
-//     }
-// }
+/**
+ * @brief This is interrupt service routine for EXTI0
+ * 
+ */
+void EXTI0_IRQHandler(void) {
+    delay(DEBOUNCE_DELAY);
+    /*is the corresponding bit in the EXTI_PR register set?*/
+    if ((EXTI->PR >> pushButton.GPIO_PinNumber) & 0x01U) {
+        /*clear the bit by writing 1*/
+        EXTI->PR |= (0x01U << pushButton.GPIO_PinNumber);
+    }
+    // delay(DEBOUNCE_DELAY);
+    // if (GPIO_ReadPin(GPIOA, GPIO_PIN_NUM_0)) { /*check state again*/
+    //     GPIO_ToggleLed(GPIOG, GPIO_PIN_NUM_13);
+    // }
+    USART_Transmit(USART3, (uint8_t *)SendMessage, TxMessSize);
+}
+
+/**
+ * @brief This is interrupt service routine for USART3
+ * 
+ */
+void USART3_IRQHandler(void) {
+    /*check if the receive register is not empty*/
+    if ((USART3->SR >> USART_SR_RXNE) & 0x01U) {
+        /*read received data*/
+        RxData = USART3->DR;
+        /*set the Rx data available flag to TRUE*/
+        IsRxAvailable = TRUE;
+    }
+}

@@ -238,6 +238,8 @@ typedef struct {
 #define ENABLE    1U
 #define BIT_RESET 0U
 #define BIT_SET   1U
+#define TRUE      1U
+#define FALSE     0U
 
 #include "stm32f429xx_gpio_driver.h"
 #include "stm32f429xx_usart_driver.h"
