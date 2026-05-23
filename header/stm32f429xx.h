@@ -81,6 +81,20 @@ typedef struct {
     volatile uint32_t GTPR;
 }USART_RegDef_t;
 
+/*Timer register definition struct*/
+typedef struct {
+    volatile uint32_t CR1;
+    volatile uint32_t CR2;
+    uint32_t RESERVED0;
+    volatile uint32_t DIER;
+    volatile uint32_t SR;
+    volatile uint32_t EGR;
+    uint32_t RESERVED1[3];
+    volatile uint32_t CNT;
+    volatile uint32_t PSC;
+    volatile uint32_t ARR;
+}TIM_RegDef_t;
+
 /*AHB1 base address*/
 #define AHB1_BASEADDR (0x40020000UL)
 /*APB1 base address*/
@@ -115,6 +129,10 @@ typedef struct {
 #define USART6 ((USART_RegDef_t *)  (APB2_BASEADDR + 0x1400UL))
 #define UART7  ((USART_RegDef_t *)  (APB1_BASEADDR + 0x7800UL))
 #define UART8  ((USART_RegDef_t *)  (APB1_BASEADDR + 0x7C00UL))
+
+/*Timer peripheral base addresses*/
+#define TIM6 ((TIM_RegDef_t *) (APB1_BASEADDR + 0x1000UL))
+#define TIM7 ((TIM_RegDef_t *) (APB1_BASEADDR + 0x1400UL))
 
 /*GPIO clock enable*/
 #define GPIOA_CLK_ENB()  (RCC->AHB1ENR |= (0x01 << 0U))    /*GPIOA peripheral clock enable*/
@@ -243,4 +261,5 @@ typedef struct {
 
 #include "stm32f429xx_gpio_driver.h"
 #include "stm32f429xx_usart_driver.h"
+#include "stm32f429xx_timer_driver.h"
 #endif //STM32F429XX_H

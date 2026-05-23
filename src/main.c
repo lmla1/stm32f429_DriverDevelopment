@@ -75,16 +75,31 @@ USART_Conf_t USART3_Conf = {
     .BaudRate       = USART_BAUDRATE_9600,    /*None parity control*/
 };
 
+TIM_Base_Conf_t TIM6_Conf = {
+    .AutoReloadPreload = ENABLE,
+    .period = 999,  /*1ms period*/
+    .Prescaler = 15 /*counter clock is 1MHz (with 16MHz timer clock)*/
+};
+
+/**
+ * @brief This function is used to start timer 6
+ * 
+ */
+void TIM6_Start(void) {
+    TIM_Base_Start(TIM6);
+}
+
 int main() {
     //uint8_t ReceivedMess[4] = {0};
     //uint8_t ReceivedMessSize = 3U;
+    uint16_t Timer6DelayCounter = 0U;
     GPIOA_CLK_ENB();
     GPIO_Init(GPIOA, pushButton);
     GPIO_IT_Init(GPIOA, pushButton, 0U);
     
     GPIOG_CLK_ENB();
     GPIO_Init(GPIOG, greenLed);
-    //GPIO_Init(GPIOG, redLed);
+    GPIO_Init(GPIOG, redLed);
 
     GPIOB_CLK_ENB();
     GPIO_Init(GPIOB, USART_Tx_Pin);
@@ -95,6 +110,10 @@ int main() {
     NVIC_SetPriority(IRQ_NO_USART3, 1U);  /*set USART3 interrupt priority*/
     NVIC_EnableIRQ(IRQ_NO_USART3);        /*enable USART3 IRQ*/
     USART_Init(USART3, USART3_Conf);
+
+    TIM6_CLK_ENB();
+    TIM_Base_Init(TIM6, TIM6_Conf);
+    TIM6_Start();
 
     /*lock green led pin configuration*/
     //GPIO_LockPinConf(GPIOG, GPIO_PIN_NUM_13);
@@ -174,6 +193,20 @@ int main() {
                 }
                 /*Reset the index*/
                 RxIndex = 0U;
+            }
+        }
+        /*Check if update event generated*/
+        if (TIM6_UEV_STS() == BIT_SET) {
+            /*Clear the update event status*/
+            TIM6_UEV_STS_CRL();
+            /*Increase the timer delay counter by 1*/
+            Timer6DelayCounter++;
+            /*Check if 1sec has elapsed*/
+            if (Timer6DelayCounter == 1000) {
+                /*Toggle the red LED*/
+                GPIO_ToggleLed(GPIOG, GPIO_PIN_NUM_14);
+                /*Reset timer 6 delay counter*/
+                Timer6DelayCounter = 0U;
             }
         }
     }
