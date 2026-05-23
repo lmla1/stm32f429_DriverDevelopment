@@ -3,6 +3,7 @@
 
 #define BLINK_DELAY    1000000
 #define DEBOUNCE_DELAY 300000
+#define BUTTON_DEBOUNCE_TIME 100U
 #define RX_BUFFER_SIZE 8U
 #define TX_BUFFER_SIZE 8U
 
@@ -12,6 +13,7 @@ volatile uint8_t TxMessSize    = 2U;
 volatile uint8_t RxIndex       = 0U;
 volatile uint8_t RxData        = 0U;
 volatile uint8_t IsRxAvailable = FALSE;
+volatile uint16_t Timer6DelayCounter = 0U;
 
 /**
  * @brief Simple delay function. It is uses a for loop to execute a delay.
@@ -89,10 +91,28 @@ void TIM6_Start(void) {
     TIM_Base_Start(TIM6);
 }
 
+/**
+ * @brief This function is used to stop timer 6
+ * 
+ */
+void TIM6_Stop(void) {
+    TIM_Base_Stop(TIM6);
+}
+
+/**
+ * @brief This function is used to initialize timer 6 interrupt
+ *        Priority is set to 1
+ * 
+ */
+void TIM6_IT_Init(void) {
+    uint8_t Priority = 1U;
+    TIM_Base_IT_Init(TIM6, Priority);
+}
+
 int main() {
     //uint8_t ReceivedMess[4] = {0};
     //uint8_t ReceivedMessSize = 3U;
-    uint16_t Timer6DelayCounter = 0U;
+
     GPIOA_CLK_ENB();
     GPIO_Init(GPIOA, pushButton);
     GPIO_IT_Init(GPIOA, pushButton, 0U);
@@ -114,6 +134,7 @@ int main() {
     TIM6_CLK_ENB();
     TIM_Base_Init(TIM6, TIM6_Conf);
     TIM6_Start();
+    TIM6_IT_Init();
 
     /*lock green led pin configuration*/
     //GPIO_LockPinConf(GPIOG, GPIO_PIN_NUM_13);
@@ -195,20 +216,20 @@ int main() {
                 RxIndex = 0U;
             }
         }
-        /*Check if update event generated*/
-        if (TIM6_UEV_STS() == BIT_SET) {
-            /*Clear the update event status*/
-            TIM6_UEV_STS_CRL();
-            /*Increase the timer delay counter by 1*/
-            Timer6DelayCounter++;
-            /*Check if 1sec has elapsed*/
-            if (Timer6DelayCounter == 1000) {
-                /*Toggle the red LED*/
-                GPIO_ToggleLed(GPIOG, GPIO_PIN_NUM_14);
-                /*Reset timer 6 delay counter*/
-                Timer6DelayCounter = 0U;
-            }
-        }
+        // /*Check if update event generated*/
+        // if (TIM6_UEV_STS() == BIT_SET) {
+        //     /*Clear the update event status*/
+        //     TIM6_UEV_STS_CRL();
+        //     /*Increase the timer delay counter by 1*/
+        //     Timer6DelayCounter++;
+        //     /*Check if 1sec has elapsed*/
+        //     if (Timer6DelayCounter == 1000) {
+        //         /*Toggle the red LED*/
+        //         GPIO_ToggleLed(GPIOG, GPIO_PIN_NUM_14);
+        //         /*Reset timer 6 delay counter*/
+        //         Timer6DelayCounter = 0U;
+        //     }
+        // }
     }
     return 0;
 }
@@ -218,17 +239,19 @@ int main() {
  * 
  */
 void EXTI0_IRQHandler(void) {
-    delay(DEBOUNCE_DELAY);
+    /*Start timer 6*/
+    TIM6_Start();
+    //delay(DEBOUNCE_DELAY);
     /*is the corresponding bit in the EXTI_PR register set?*/
     if ((EXTI->PR >> pushButton.GPIO_PinNumber) & 0x01U) {
-        /*clear the bit by writing 1*/
-        EXTI->PR |= (0x01U << pushButton.GPIO_PinNumber);
+        /*clear the pending bit by writing 1*/
+        EXTI->PR |= (0x01U << pushButton.GPIO_PinNumber);   
     }
     // delay(DEBOUNCE_DELAY);
     // if (GPIO_ReadPin(GPIOA, GPIO_PIN_NUM_0)) { /*check state again*/
     //     GPIO_ToggleLed(GPIOG, GPIO_PIN_NUM_13);
     // }
-    USART_Transmit(USART3, (uint8_t *)SendMessage, TxMessSize);
+    //USART_Transmit(USART3, (uint8_t *)SendMessage, TxMessSize);
 }
 
 /**
@@ -242,5 +265,28 @@ void USART3_IRQHandler(void) {
         RxData = USART3->DR;
         /*set the Rx data available flag to TRUE*/
         IsRxAvailable = TRUE;
+    }
+}
+
+/**
+ * @brief This is interrupt service routine for Timer 6 and DAC
+ * 
+ */
+void TIM6_DAC_IRQHandler(void) {
+    /*Check if update event generated*/
+    if (TIM6_UEV_STS() == BIT_SET) {
+        /*Clear the update event status*/
+        TIM6_UEV_STS_CRL();
+        /*Increase the timer delay counter by 1*/
+        Timer6DelayCounter++;
+        /*Check if 1sec has elapsed*/
+        if (Timer6DelayCounter == BUTTON_DEBOUNCE_TIME) {
+            /*Transmi data*/
+            USART_Transmit(USART3, (uint8_t *)SendMessage, TxMessSize);
+            /*Reset timer 6 delay counter*/
+            Timer6DelayCounter = 0U;
+            /*Stop timer 6*/
+            TIM6_Stop();
+        }
     }
 }
