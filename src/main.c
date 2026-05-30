@@ -1,5 +1,6 @@
 #include "stm32f429xx.h"
 #include <string.h>
+#include <stdlib.h>
 
 #define BLINK_DELAY    1000000
 #define DEBOUNCE_DELAY 300000
@@ -83,6 +84,32 @@ TIM_Base_Conf_t TIM6_Conf = {
     .Prescaler = 15 /*counter clock is 1MHz (with 16MHz timer clock)*/
 };
 
+GPIO_PinConf_t OC_Pin = {
+    /*GPIO - TIM4 output comapre pin configuration
+    Configure  GPIO (GPIOD pin15/channel 4) pin to use in alternate function mode (TIM4 - OC Channel 4)*/
+    .GPIO_PinMode = GPIO_MODE_ALT,
+    .GPIO_PUPD = GPIO_NO_PUPD,
+    .GPIO_OutType = GPIO_OUTPUT_PP,
+    .GPIO_OutSpeed = GPIO_SPEED_VERY_HIGH,
+    .GPIO_PinNumber = GPIO_PIN_NUM_15,
+    .GPIO_AltFnc = GPIO_ALT_AF2
+};
+
+TIM_Base_Conf_t TIM4_Conf = {
+    /*Timer 4 configuration*/
+    /*Timer base init*/
+    .AutoReloadPreload = ENABLE,
+    .period = 999,
+    .Prescaler = 15,
+    .CounterMode = TIM_UPCOUNTING
+};
+
+TIM_OC_Conf_t TIM4_OC_Conf = {
+    .OCMode = TIM_OCMODE_PWM1,
+    .OCPolarity = TIM_OCPOLARITY_HIGH,
+    .Pulse = 0
+};
+
 /**
  * @brief This function is used to start timer 6
  * 
@@ -109,10 +136,33 @@ void TIM6_IT_Init(void) {
     TIM_Base_IT_Init(TIM6, Priority);
 }
 
+/**
+ * @brief This function initializes timer 4 channel 4 to be used in output compare mode
+ *        This configuration is applied for peripheral clock at 16MHz
+ * 
+ */
+void TIM4_OC_Init(void) {
+    GPIOD_CLK_ENB();
+    GPIO_Init(GPIOD, OC_Pin);
+
+    TIM4_CLK_ENB();
+    TIM_Base_Init(TIM4, TIM4_Conf);
+    
+    TIM_OC_Init(TIM4, TIM4_OC_Conf, TIM_OC_CHANNEL_4);
+}
+
+/**
+ * @brief This function is used to start timer 4
+ * 
+ */
+void TIM4_Start(void) {
+    TIM_Base_Start(TIM4);
+}
+
 int main() {
     //uint8_t ReceivedMess[4] = {0};
     //uint8_t ReceivedMessSize = 3U;
-
+    uint8_t DutyCycle = 0;
     GPIOA_CLK_ENB();
     GPIO_Init(GPIOA, pushButton);
     GPIO_IT_Init(GPIOA, pushButton, 0U);
@@ -135,6 +185,9 @@ int main() {
     TIM_Base_Init(TIM6, TIM6_Conf);
     TIM6_Start();
     TIM6_IT_Init();
+    TIM4_OC_Init();
+
+    TIM4_Start();
 
     /*lock green led pin configuration*/
     //GPIO_LockPinConf(GPIOG, GPIO_PIN_NUM_13);
@@ -203,15 +256,18 @@ int main() {
             if (RxData == '\n') {
                 /*Null-terminate the string/message*/
                 ReceivedMess[RxIndex - 1] = '\0';
+                DutyCycle = atoi((const char *) ReceivedMess);
+                /*set duty cycle for timer 4 pwm channel 4*/
+                TIM4_OC_PWM_SET_DUTY(TIM_OC_CHANNEL_4, (TIM4_Conf.period * DutyCycle) / 100);
                 /*check if the received message is "ON"*/
-                if (strcmp((const char *)ReceivedMess, "ON") == 0) {
+                //if (strcmp((const char *)ReceivedMess, "ON") == 0) {
                     /*Turn green LED ON*/
-                    GPIO_WritePinBit(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_HIGH);
-                }
-                if (strcmp((const char *)ReceivedMess, "OFF") == 0) {
+                    //GPIO_WritePinBit(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_HIGH);
+                //}
+                //if (strcmp((const char *)ReceivedMess, "OFF") == 0) {
                     /*Turn green LED OFF*/
-                    GPIO_WritePinBit(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_LOW);
-                }
+                    //GPIO_WritePinBit(GPIOG, GPIO_PIN_NUM_13, GPIO_PIN_LOW);
+                //}
                 /*Reset the index*/
                 RxIndex = 0U;
             }

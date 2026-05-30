@@ -85,14 +85,21 @@ typedef struct {
 typedef struct {
     volatile uint32_t CR1;
     volatile uint32_t CR2;
-    uint32_t RESERVED0;
+    volatile uint32_t SMCR;
     volatile uint32_t DIER;
     volatile uint32_t SR;
     volatile uint32_t EGR;
-    uint32_t RESERVED1[3];
+    volatile uint32_t CCMR[2];
+    volatile uint32_t CCER;
     volatile uint32_t CNT;
     volatile uint32_t PSC;
     volatile uint32_t ARR;
+    uint32_t RESERVED0;
+    volatile uint32_t CCR[4];
+    uint32_t RESERVED1;
+    volatile uint32_t DCR;
+    volatile uint32_t DMAR;
+    volatile uint32_t OR;
 }TIM_RegDef_t;
 
 /*AHB1 base address*/
@@ -133,6 +140,10 @@ typedef struct {
 /*Timer peripheral base addresses*/
 #define TIM6 ((TIM_RegDef_t *) (APB1_BASEADDR + 0x1000UL))
 #define TIM7 ((TIM_RegDef_t *) (APB1_BASEADDR + 0x1400UL))
+#define TIM2 ((TIM_RegDef_t *) (APB1_BASEADDR + 0x0000UL))
+#define TIM3 ((TIM_RegDef_t *) (APB1_BASEADDR + 0x0400UL))
+#define TIM4 ((TIM_RegDef_t *) (APB1_BASEADDR + 0x0800UL))
+#define TIM5 ((TIM_RegDef_t *) (APB1_BASEADDR + 0x0C00UL))
 
 /*GPIO clock enable*/
 #define GPIOA_CLK_ENB()  (RCC->AHB1ENR |= (0x01 << 0U))    /*GPIOA peripheral clock enable*/
